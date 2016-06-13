@@ -291,7 +291,9 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
     s->hash_shift =  ((s->hash_bits+MIN_MATCH-1)/MIN_MATCH);
 
     s->window = (Bytef *) ZALLOC(strm, s->w_size, 2*sizeof(Byte));
+#ifndef FASTEST
     s->prev   = (Posf *)  ZALLOC(strm, s->w_size, sizeof(Pos));
+#endif
     s->head   = (Posf *)  ZALLOC(strm, s->hash_size, sizeof(Pos));
 
     s->high_water = 0;      /* nothing written to s->window yet */
@@ -302,8 +304,13 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
     s->pending_buf = (uchf *) overlay;
     s->pending_buf_size = (ulg)s->lit_bufsize * (sizeof(ush)+2L);
 
+#ifdef FASTEST
+    if (s->window == Z_NULL || s->head == Z_NULL ||
+        s->pending_buf == Z_NULL) {
+#else
     if (s->window == Z_NULL || s->prev == Z_NULL || s->head == Z_NULL ||
         s->pending_buf == Z_NULL) {
+#endif
         s->status = FINISH_STATE;
         strm->msg = ERR_MSG(Z_MEM_ERROR);
         deflateEnd (strm);
@@ -997,7 +1004,9 @@ int ZEXPORT deflateEnd (strm)
     /* Deallocate in reverse order of allocations: */
     TRY_FREE(strm, strm->state->pending_buf);
     TRY_FREE(strm, strm->state->head);
+#ifndef FASTEST
     TRY_FREE(strm, strm->state->prev);
+#endif
     TRY_FREE(strm, strm->state->window);
 
     ZFREE(strm, strm->state);
